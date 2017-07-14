@@ -1,8 +1,8 @@
 
 import sys
 from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QHBoxLayout, QVBoxLayout, QLabel, QGroupBox,\
-     QFormLayout, QLineEdit
-from PyQt5.QtGui import QIntValidator
+     QFormLayout, QLineEdit, QTableWidget, QTableWidgetItem
+from PyQt5.QtGui import QIntValidator, QFont
 from PyQt5.QtCore import Qt
 
 
@@ -26,6 +26,7 @@ class Receiving(QMainWindow):
         mainLayout = QVBoxLayout()
         mainLayout.addWidget(self.horizontalLabels)
         mainLayout.addLayout(self.inputLayout)
+        mainLayout.addWidget(self.mainTable)
 
         centralWidget.setLayout(mainLayout)
 
@@ -77,28 +78,66 @@ class Receiving(QMainWindow):
         pacSlipLine = QLineEdit()
         totUnitsLine = QLineEdit()
         totUnitsLine.setValidator(intValidator)
+
+        psUnitsLabel = QLabel('PS &Units')
         psUnitsLine = QLineEdit()
         psUnitsLine.setValidator(intValidator)
-        depLabel = QLabel('<D1>')
+        psUnitsLabel.setBuddy(psUnitsLine)
+        totUnitsLabel = QLabel('Total <   0>')
+        
+        psHorizontalLayout = QHBoxLayout()
+        psHorizontalLayout.addWidget(psUnitsLabel)
+        psHorizontalLayout.addWidget(psUnitsLine)
+        psHorizontalLayout.addWidget(totUnitsLabel)
+        
+        storeLocation = QLabel('Location < 22>')
+        depLabel = QLabel('Department <D1>')
+        
+        locHorizontalLayout = QHBoxLayout()
+        locHorizontalLayout.addWidget(storeLocation)
+        locHorizontalLayout.addWidget(depLabel)
+        
         coordNumLine = QLineEdit()
         coordNumLine.setValidator(intValidator)
 
-        rightForm.addRow('Bill of Landing ', bolLine)
-        rightForm.addRow('Packing Slip ', pacSlipLine)
-        rightForm.addRow('Total Units ', totUnitsLine)
-        rightForm.addRow('PS Units ', psUnitsLine)
-        rightForm.addRow('Department ', depLabel)
-        rightForm.addRow('Receiving Coordinator ', coordNumLine)
+        rightForm.addRow('&Bill of Landing ', bolLine)
+        rightForm.addRow('Packing &Slip ', pacSlipLine)
+        rightForm.addRow('&Total Units Received', totUnitsLine)
+        rightForm.addRow(psHorizontalLayout)
+        rightForm.addRow(locHorizontalLayout)
+        rightForm.addRow('Receiving &Coordinator ', coordNumLine)
 
         self.inputLayout.addLayout(leftForm)
         self.inputLayout.addLayout(rightForm)
 
-        
+
+    def setupTable(self, qtable):
+
+        columns = (2, 5)
+        rows = qtable.rowCount()
+
+        for column in columns:
+            for row in range(rows):
+                
+                qtable.setRowHeight(row, 20)
+                placeholderCell = QTableWidgetItem('###')
+                placeholderCell.setFlags(placeholderCell.flags() ^ Qt.ItemIsEditable)
+                qtable.setItem(row, column, placeholderCell)
+
+        headers = ['UPC', 'PLU', 'DESCRIPTION', 'UNITS RECEIVED', 'PS UNITS', 'VENDOR MODEL']
+        qtable.setHorizontalHeaderLabels(headers)
+
+        font = qtable.font()
+        font.setPointSize(20)
+
+        qtable.setColumnWidth(0, 100)
+        qtable.setShowGrid(False)
 
 
     def createMainTable(self):
 
-        pass
+        self.mainTable = QTableWidget(50, 6)
+        self.setupTable(self.mainTable)
         
 
 if __name__ == '__main__':
