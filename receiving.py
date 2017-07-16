@@ -31,6 +31,8 @@ class Receiving(QMainWindow):
         centralWidget.setLayout(mainLayout)
 
         self.setWindowTitle('Vendor Receiving')
+        self.setGeometry(300, 300, 1080, 640)
+        self.setMinimumSize(1080, 640)
         self.show()
 
 
@@ -48,6 +50,10 @@ class Receiving(QMainWindow):
         layout.addWidget(passLabel)
         layout.addWidget(nameLabel)
 
+        layout.setAlignment(idLabel, Qt.AlignHCenter)
+        layout.setAlignment(passLabel, Qt.AlignHCenter)
+        layout.setAlignment(nameLabel, Qt.AlignHCenter)
+
         self.horizontalLabels.setLayout(layout)
 
 
@@ -58,10 +64,13 @@ class Receiving(QMainWindow):
         rightForm = QFormLayout()
 
         intValidator = QIntValidator()
+        windowWidth = self.width()
 
         poLine = QLineEdit()
         poLine.setValidator(intValidator)
+        poLine.setMaximumWidth(windowWidth / 3)
         vendorLine = QLineEdit()
+        vendorLine.setMaximumWidth(windowWidth / 3)
         vendorNameLabel = QLabel('<Example Vendor Name>')
         addrLabel = QLabel('<Example Address>')
         ctstLabel = QLabel('<Example City/State>')
@@ -113,24 +122,31 @@ class Receiving(QMainWindow):
 
     def setupTable(self, qtable):
 
+        #Make the 3rd and 6th columns read-only 
         columns = (2, 5)
         rows = qtable.rowCount()
 
         for column in columns:
             for row in range(rows):
-                
-                qtable.setRowHeight(row, 20)
+                qtable.setRowHeight(row, 30)
                 placeholderCell = QTableWidgetItem('###')
-                placeholderCell.setFlags(placeholderCell.flags() ^ Qt.ItemIsEditable)
+                placeholderCell.setFlags(placeholderCell.flags() ^ Qt.ItemIsEditable) 
                 qtable.setItem(row, column, placeholderCell)
-
+                
+        
         headers = ['UPC', 'PLU', 'DESCRIPTION', 'UNITS RECEIVED', 'PS UNITS', 'VENDOR MODEL']
         qtable.setHorizontalHeaderLabels(headers)
 
-        font = qtable.font()
-        font.setPointSize(20)
+        fontSize = 8
+        font = qtable.horizontalHeader().font()
+        font.setPointSize(fontSize)
+        qtable.horizontalHeader().setFont(font)
+        qtable.setFont(font)
 
-        qtable.setColumnWidth(0, 100)
+        columnSizes = {headers[0]: 120, headers[1]: 85, headers[2]: 300, headers[3]: 140, headers[4]: 100, headers[5]: 250} 
+        for i, column in enumerate(headers):
+            qtable.setColumnWidth(i, columnSizes[column])
+        
         qtable.setShowGrid(False)
 
 
@@ -138,6 +154,12 @@ class Receiving(QMainWindow):
 
         self.mainTable = QTableWidget(50, 6)
         self.setupTable(self.mainTable)
+        
+
+    def resizeEvent(self, e):
+
+        newSize = e.size()
+        print(str(newSize))
         
 
 if __name__ == '__main__':
