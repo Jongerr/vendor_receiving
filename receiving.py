@@ -159,41 +159,37 @@ class Receiving(QMainWindow):
         self.inputLayout.addLayout(rightForm)
 
 
-    def setupTable(self, qtable):
-
-        #Make the 3rd and 6th columns read-only 
-        columns = (2, 5)
-        rows = qtable.rowCount()
-
-        for column in columns:
-            for row in range(rows):
-                qtable.setRowHeight(row, 30)
-                placeholderCell = QTableWidgetItem('###')
-                placeholderCell.setFlags(placeholderCell.flags() ^ Qt.ItemIsEditable) 
-                qtable.setItem(row, column, placeholderCell)
-                
-        
-        headers = ['UPC', 'PLU', 'DESCRIPTION', 'UNITS RECEIVED', 'PS UNITS', 'VENDOR MODEL']
-        qtable.setHorizontalHeaderLabels(headers)
-
-        fontSize = 8
-        font = qtable.horizontalHeader().font()
-        font.setPointSize(fontSize)
-        qtable.horizontalHeader().setFont(font)
-        qtable.setFont(font)
-
-        columnSizes = {headers[0]: 120, headers[1]: 85, headers[2]: 300, headers[3]: 140, headers[4]: 100, headers[5]: 250} 
-        for i, column in enumerate(headers):
-            qtable.setColumnWidth(i, columnSizes[column])
-        
-        qtable.setShowGrid(False)
-
-
     def createMainTable(self):
 
         self.mainTable = QTableWidget(50, 6)
-        self.setupTable(self.mainTable)
+
+        #Make the 3rd and 6th columns read-only 
+        columns = (2, 5)
+        rows = self.mainTable.rowCount()
+
+        for column in columns:
+            for row in range(rows):
+                self.mainTable.setRowHeight(row, 30)
+                placeholderCell = QTableWidgetItem('###')
+                placeholderCell.setFlags(placeholderCell.flags() ^ Qt.ItemIsEditable) 
+                self.mainTable.setItem(row, column, placeholderCell)
+                
         
+        headers = ['UPC', 'PLU', 'DESCRIPTION', 'UNITS RECEIVED', 'PS UNITS', 'VENDOR MODEL']
+        self.mainTable.setHorizontalHeaderLabels(headers)
+
+        fontSize = 8
+        font = self.mainTable.horizontalHeader().font()
+        font.setPointSize(fontSize)
+        self.mainTable.horizontalHeader().setFont(font)
+        self.mainTable.setFont(font)
+
+        columnSizes = {headers[0]: 120, headers[1]: 85, headers[2]: 300, headers[3]: 140, headers[4]: 100, headers[5]: 250} 
+        for i, column in enumerate(headers):
+            self.mainTable.setColumnWidth(i, columnSizes[column])
+        
+        self.mainTable.setShowGrid(False)
+       
 
 if __name__ == '__main__':
 
