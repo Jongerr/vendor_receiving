@@ -1,9 +1,49 @@
 
 import sys
 from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QHBoxLayout, QVBoxLayout, QLabel, QGroupBox,\
-     QFormLayout, QLineEdit, QTableWidget, QTableWidgetItem
+     QFormLayout, QLineEdit, QTableWidget, QTableWidgetItem, QMessageBox, QDialog, QPushButton
 from PyQt5.QtGui import QIntValidator, QFont
 from PyQt5.QtCore import Qt
+
+
+class Login(QDialog):
+
+    def __init__(self):
+        super().__init__()
+
+        self.initUI()
+
+
+    def initUI(self):
+
+        self.usernameLine = QLineEdit('Username')
+        self.passwordLine = QLineEdit('Password')
+        
+        loginButton = QPushButton('Login')
+        loginButton.clicked.connect(self.checkCredentials)
+
+        loginBox = QGroupBox('Login Form', self)
+        loginLayout = QVBoxLayout()
+        loginLayout.addWidget(self.usernameLine)
+        loginLayout.addWidget(self.passwordLine)
+        loginLayout.addWidget(loginButton)
+
+        loginBox.setLayout(loginLayout)
+
+        self.setGeometry(300, 300, 200, 150)
+        self.show()
+
+
+    def checkCredentials(self, checked):
+
+        username = self.usernameLine.text()
+        password = self.passwordLine.text()
+
+        if username == 'test' and password == 'test':
+            self.accept()
+
+        else:
+            QMessageBox.warning(self, 'Login', 'Login Failed')
 
 
 class Receiving(QMainWindow):
@@ -33,7 +73,6 @@ class Receiving(QMainWindow):
         self.setWindowTitle('Vendor Receiving')
         self.setGeometry(300, 300, 1080, 640)
         self.setMinimumSize(1080, 640)
-        self.show()
 
 
     def createTopLabels(self):
@@ -156,14 +195,12 @@ class Receiving(QMainWindow):
         self.setupTable(self.mainTable)
         
 
-    def resizeEvent(self, e):
-
-        newSize = e.size()
-        print(str(newSize))
-        
-
 if __name__ == '__main__':
 
     app = QApplication(sys.argv)
+    login = Login()
     receiver = Receiving()
+    if(login.exec_() == QDialog.Accepted):
+        receiver.show()
+        
     sys.exit(app.exec_())
