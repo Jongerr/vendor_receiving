@@ -1,7 +1,7 @@
 
 import sys
 from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QHBoxLayout, QVBoxLayout, QLabel, QGroupBox,\
-     QFormLayout, QLineEdit, QTableWidget, QTableWidgetItem, QMessageBox, QDialog, QPushButton
+     QFormLayout, QLineEdit, QTableWidget, QTableWidgetItem, QMessageBox, QDialog, QPushButton, QLayout, QItemDelegate
 from PyQt5.QtGui import QIntValidator, QFont
 from PyQt5.QtCore import Qt
 
@@ -10,7 +10,7 @@ class Login(QDialog):
 
     def __init__(self):
         super().__init__()
-
+        
         self.initUI()
 
 
@@ -36,21 +36,36 @@ class Login(QDialog):
 
     def checkCredentials(self, checked):
 
-        username = self.usernameLine.text()
-        password = self.passwordLine.text()
+        self.username = self.usernameLine.text()
+        self.password = self.passwordLine.text()
 
-        if username == 'test' and password == 'test':
+        if self.username == 'test' and self.password == 'test':
             self.accept()
 
         else:
             QMessageBox.warning(self, 'Login', 'Login Failed')
 
-
-class Receiving(QMainWindow):
+#based on https://stackoverflow.com/questions/22708623/qtablewidget-only-numbers-permitted
+class Delegate(QItemDelegate):
 
     def __init__(self):
         super().__init__()
 
+
+    def createEditor(self, parent, option, index):
+
+        lineEdit = QLineEdit(parent)
+        lineEdit.setValidator(QIntValidator(lineEdit))
+        return lineEdit
+
+
+class Receiving(QMainWindow):
+
+    def __init__(self, username, password):
+        super().__init__()
+        
+        self.username = username
+        self.password = password
         self.initUI()
         
 
@@ -72,7 +87,13 @@ class Receiving(QMainWindow):
 
         self.setWindowTitle('Vendor Receiving')
         self.setGeometry(300, 300, 1080, 640)
-        self.setMinimumSize(1080, 640)
+        #self.setMinimumSize(1080, 640)
+
+
+    def setUserPass(self, username, password):
+
+        self.username = username
+        self.password = password
 
 
     def createTopLabels(self):
@@ -81,7 +102,7 @@ class Receiving(QMainWindow):
         self.horizontalLabels.setAlignment(Qt.AlignHCenter)
         layout = QHBoxLayout()
 
-        idLabel = QLabel('Clerk ID:[           ]')
+        idLabel = QLabel('Clerk ID:[{}]'.format(self.username))
         passLabel = QLabel('Password:[********* ]')
         nameLabel = QLabel('Name: <Michie, Jon T.   >')
 
@@ -107,9 +128,9 @@ class Receiving(QMainWindow):
 
         poLine = QLineEdit()
         poLine.setValidator(intValidator)
-        poLine.setMaximumWidth(windowWidth / 3)
+        poLine.setMaximumWidth(windowWidth / 6)
         vendorLine = QLineEdit()
-        vendorLine.setMaximumWidth(windowWidth / 3)
+        vendorLine.setMaximumWidth(windowWidth / 8)
         vendorNameLabel = QLabel('<Example Vendor Name>')
         addrLabel = QLabel('<Example Address>')
         ctstLabel = QLabel('<Example City/State>')
@@ -123,30 +144,39 @@ class Receiving(QMainWindow):
         leftForm.addRow('Zip ', zipLabel)
 
         bolLine = QLineEdit()
+        bolLine.setMaximumWidth(windowWidth / 4)
         pacSlipLine = QLineEdit()
+        pacSlipLine.setMaximumWidth(windowWidth / 4)
         totUnitsLine = QLineEdit()
         totUnitsLine.setValidator(intValidator)
+        totUnitsLine.setMaximumWidth(windowWidth / 8)
 
         psUnitsLabel = QLabel('PS &Units')
         psUnitsLine = QLineEdit()
         psUnitsLine.setValidator(intValidator)
+        psUnitsLine.setMaximumWidth(windowWidth / 8)
         psUnitsLabel.setBuddy(psUnitsLine)
-        totUnitsLabel = QLabel('Total <   0>')
+        self.totUnitsLabel = QLabel('Total <   0>')
         
         psHorizontalLayout = QHBoxLayout()
+        psHorizontalLayout.setSpacing(5)
+        #QLayout.setAlignment(psHorizontalLayout, Qt.AlignJustify)
         psHorizontalLayout.addWidget(psUnitsLabel)
         psHorizontalLayout.addWidget(psUnitsLine)
-        psHorizontalLayout.addWidget(totUnitsLabel)
+        psHorizontalLayout.addWidget(self.totUnitsLabel)
+        
         
         storeLocation = QLabel('Location < 22>')
         depLabel = QLabel('Department <D1>')
         
         locHorizontalLayout = QHBoxLayout()
+        locHorizontalLayout.setSpacing(3)
         locHorizontalLayout.addWidget(storeLocation)
         locHorizontalLayout.addWidget(depLabel)
         
         coordNumLine = QLineEdit()
         coordNumLine.setValidator(intValidator)
+        coordNumLine.setMaximumWidth(windowWidth / 8)
 
         rightForm.addRow('&Bill of Landing ', bolLine)
         rightForm.addRow('Packing &Slip ', pacSlipLine)
@@ -162,6 +192,7 @@ class Receiving(QMainWindow):
     def createMainTable(self):
 
         self.mainTable = QTableWidget(50, 6)
+        self.mainTable.setItemDelegate(Delegate())
 
         #Make the 3rd and 6th columns read-only 
         columns = (2, 5)
@@ -174,29 +205,88 @@ class Receiving(QMainWindow):
                 placeholderCell.setFlags(placeholderCell.flags() ^ Qt.ItemIsEditable) 
                 self.mainTable.setItem(row, column, placeholderCell)
                 
-        
-        headers = ['UPC', 'PLU', 'DESCRIPTION', 'UNITS RECEIVED', 'PS UNITS', 'VENDOR MODEL']
+        #Setting table headers
+        headers = ['UPC', 'PLU', 'DESCRIPTION', 'UNITS', 'PS UNITS', 'VENDOR MODEL']
         self.mainTable.setHorizontalHeaderLabels(headers)
 
+        #Settting font size
         fontSize = 8
         font = self.mainTable.horizontalHeader().font()
         font.setPointSize(fontSize)
         self.mainTable.horizontalHeader().setFont(font)
         self.mainTable.setFont(font)
 
-        columnSizes = {headers[0]: 120, headers[1]: 85, headers[2]: 300, headers[3]: 140, headers[4]: 100, headers[5]: 250} 
+        #Setting column widths
+        columnSizes = {headers[0]: 120, headers[1]: 85, headers[2]: 200, headers[3]: 70, headers[4]: 70, headers[5]: 175} 
         for i, column in enumerate(headers):
             self.mainTable.setColumnWidth(i, columnSizes[column])
         
         self.mainTable.setShowGrid(False)
+
+        #Making connections
+        self.mainTable.cellChanged.connect(self.cellChangeSlot)
+
+
+    def cellChangeSlot(self, row, column):
+
+        if column == 0:
+            self.updateModelInfo(row, column)
+            
+        elif column == 3:
+            self.updateTotalUnits()
+            
+        elif column == 4:
+            self.updateTotalPS()
+
+        else:
+            pass
+
+
+    def updateModelInfo(self, row, column):
+
+        upcNum = int(self.mainTable.item(row, column).text())
+
+        if upcNum == 123456:
+
+            cellItem = QTableWidgetItem('Example Model')
+            cellItem.setFlags(cellItem.flags() ^ Qt.ItemIsEditable)
+            self.mainTable.setItem(row, 2, cellItem)
+
+        else:
+
+            cellItem = QTableWidgetItem('')
+            cellItem.setFlags(cellItem.flags() ^ Qt.ItemIsEditable)
+            self.mainTable.setItem(row, 2, cellItem)
+
+
+    def updateTotalUnits(self):
+
+        total = 0
+        
+        rows = self.mainTable.rowCount()
+        for row in range(rows):
+            cell = self.mainTable.item(row, 3)
+
+            if cell:
+                cellVal = int(cell.text())
+                total = total + cellVal
+
+        self.totUnitsLabel.setText('Total <{}>'.format(total))
+
+
+    def updateTotalPS(self):
+
+        pass
+    
        
 
 if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     login = Login()
-    receiver = Receiving()
+    #receiver = Receiving()
     if(login.exec_() == QDialog.Accepted):
+        receiver = Receiving(login.username, login.password)
         receiver.show()
         
     sys.exit(app.exec_())
