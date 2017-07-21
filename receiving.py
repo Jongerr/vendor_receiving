@@ -2,6 +2,7 @@
 import sys
 from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QHBoxLayout, QVBoxLayout, QLabel, QGroupBox,\
      QFormLayout, QLineEdit, QTableWidget, QTableWidgetItem, QMessageBox, QDialog, QPushButton, QLayout, QItemDelegate
+     
 from PyQt5.QtGui import QIntValidator, QFont
 from PyQt5.QtCore import Qt
 
@@ -86,8 +87,8 @@ class Receiving(QMainWindow):
         centralWidget.setLayout(mainLayout)
 
         self.setWindowTitle('Vendor Receiving')
-        self.setGeometry(300, 300, 1080, 640)
-        #self.setMinimumSize(1080, 640)
+        self.setGeometry(300, 300, 800, 585)
+        self.setMinimumSize(800, 585)
 
 
     def setUserPass(self, username, password):
@@ -159,12 +160,14 @@ class Receiving(QMainWindow):
         self.totUnitsLabel = QLabel('Total <   0>')
         
         psHorizontalLayout = QHBoxLayout()
-        psHorizontalLayout.setSpacing(5)
         #QLayout.setAlignment(psHorizontalLayout, Qt.AlignJustify)
         psHorizontalLayout.addWidget(psUnitsLabel)
         psHorizontalLayout.addWidget(psUnitsLine)
         psHorizontalLayout.addWidget(self.totUnitsLabel)
-        
+        ulabel = psHorizontalLayout.setAlignment(psUnitsLabel, Qt.AlignLeft)
+        uline = psHorizontalLayout.setAlignment(psUnitsLine, Qt.AlignLeft)
+        totulabel = psHorizontalLayout.setAlignment(self.totUnitsLabel, Qt.AlignLeft)
+        psHorizontalLayout.addSpacing(180)
         
         storeLocation = QLabel('Location < 22>')
         depLabel = QLabel('Department <D1>')
@@ -173,6 +176,7 @@ class Receiving(QMainWindow):
         locHorizontalLayout.setSpacing(3)
         locHorizontalLayout.addWidget(storeLocation)
         locHorizontalLayout.addWidget(depLabel)
+        locHorizontalLayout.addSpacing(180)
         
         coordNumLine = QLineEdit()
         coordNumLine.setValidator(intValidator)
@@ -277,6 +281,12 @@ class Receiving(QMainWindow):
     def updateTotalPS(self):
 
         pass
+
+
+    def resizeEvent(self, e):
+
+        size = e.size()
+        print(size)
     
        
 
