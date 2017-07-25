@@ -1,10 +1,10 @@
-
+import json
 import sys
-from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QHBoxLayout, QVBoxLayout, QLabel, QGroupBox,\
-     QFormLayout, QLineEdit, QTableWidget, QTableWidgetItem, QMessageBox, QDialog, QPushButton, QLayout, QItemDelegate
-     
+from custom_qt_classes import Delegate, NoEditValidator
+from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIntValidator, QFont
 from PyQt5.QtCore import Qt
+from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 
 
 class Login(QDialog):
@@ -46,19 +46,6 @@ class Login(QDialog):
         else:
             QMessageBox.warning(self, 'Login', 'Login Failed')
 
-#based on https://stackoverflow.com/questions/22708623/qtablewidget-only-numbers-permitted
-class Delegate(QItemDelegate):
-
-    def __init__(self):
-        super().__init__()
-
-
-    def createEditor(self, parent, option, index):
-
-        lineEdit = QLineEdit(parent)
-        lineEdit.setValidator(QIntValidator(lineEdit))
-        return lineEdit
-
 
 class Receiving(QMainWindow):
 
@@ -67,11 +54,12 @@ class Receiving(QMainWindow):
         
         self.username = username
         self.password = password
+        self.po_dict = {}
+        self.initDB()
         self.initUI()
         
 
     def initUI(self):
-
         centralWidget = QWidget()
         self.setCentralWidget(centralWidget)
 
@@ -91,14 +79,22 @@ class Receiving(QMainWindow):
         self.setMinimumSize(800, 585)
 
 
-    def setUserPass(self, username, password):
+    def initDB(self):
+        self.db = QSqlDatabase.addDatabase('QSQLITE')
+        self.db.setDatabaseName('C:\\receiving_project\\vendor_receiving\\inventory.db')
+        if not self.db.open():
+            print('Database could not be opened.')
+            print(QSqlDatabase.lastError().text())
+            self.close()
+        self.query = QSqlQuery()
 
+
+    def setUserPass(self, username, password):
         self.username = username
         self.password = password
 
 
-    def createTopLabels(self):
-        
+    def createTopLabels(self):       
         self.horizontalLabels = QGroupBox('Vendor Receiving Entry')
         self.horizontalLabels.setAlignment(Qt.AlignHCenter)
         layout = QHBoxLayout()
@@ -119,7 +115,6 @@ class Receiving(QMainWindow):
 
 
     def createMainInputs(self):
-
         self.inputLayout = QHBoxLayout()
         leftForm = QFormLayout()
         rightForm = QFormLayout()
@@ -127,9 +122,10 @@ class Receiving(QMainWindow):
         intValidator = QIntValidator()
         windowWidth = self.width()
 
-        poLine = QLineEdit()
-        poLine.setValidator(intValidator)
-        poLine.setMaximumWidth(windowWidth / 6)
+        self.poLine = QLineEdit()
+        self.poLine.setValidator(intValidator)
+        self.poLine.setMaximumWidth(windowWidth / 6)
+        self.poLine.editingFinished.connect(self.lookupPO)
         vendorLine = QLineEdit()
         vendorLine.setMaximumWidth(windowWidth / 8)
         vendorNameLabel = QLabel('<Example Vendor Name>')
@@ -137,7 +133,7 @@ class Receiving(QMainWindow):
         ctstLabel = QLabel('<Example City/State>')
         zipLabel = QLabel('<Example Zip Code>')
 
-        leftForm.addRow('&P.O.# ', poLine)
+        leftForm.addRow('&P.O.# ', self.poLine)
         leftForm.addRow('Vendor ', vendorLine)
         leftForm.addRow('Name ', vendorNameLabel)
         leftForm.addRow('Address ', addrLabel)
@@ -194,14 +190,12 @@ class Receiving(QMainWindow):
 
 
     def createMainTable(self):
-
         self.mainTable = QTableWidget(50, 6)
         self.mainTable.setItemDelegate(Delegate())
 
         #Make the 3rd and 6th columns read-only 
         columns = (2, 5)
         rows = self.mainTable.rowCount()
-
         for column in columns:
             for row in range(rows):
                 self.mainTable.setRowHeight(row, 30)
@@ -226,55 +220,62 @@ class Receiving(QMainWindow):
             self.mainTable.setColumnWidth(i, columnSizes[column])
         
         self.mainTable.setShowGrid(False)
-
         #Making connections
         self.mainTable.cellChanged.connect(self.cellChangeSlot)
 
 
-    def cellChangeSlot(self, row, column):
+    def lookupPO(self):
+        po_num = self.poLine.text()
+        if not self.query.exec_("select * from purchase_order where po = {}".format(po_num)):
+            print(query.lastError().text())
+            return False
+        elif not self.query.next():
+            self.poLine.setText('')
+            noPOMessage = QMessageBox()
+            QMessageBox.warning(self, 'PO not found', 'Could not find PO# {}.'.format(po_num))
+            return False
+        else:
+            po = self.query.value(0)
+            vendor = self.query.value(1)
+            department = self.query.value(2)
+            items = self.query.value(3)
+            items = json.loads(items)
+            self.po_dict[po] = {'vendor': vendor, 'department': department, 'items': items}
+            #self.poLine.setValidator(NoEditValidator())
+            return True
+            
 
+    def cellChangeSlot(self, row, column):
         if column == 0:
-            self.updateModelInfo(row, column)
-            
+            self.updateModelInfo(row, column)   
         elif column == 3:
-            self.updateTotalUnits()
-            
+            self.updateTotalUnits()            
         elif column == 4:
             self.updateTotalPS()
-
         else:
             pass
 
 
     def updateModelInfo(self, row, column):
-
         upcNum = int(self.mainTable.item(row, column).text())
-
         if upcNum == 123456:
-
             cellItem = QTableWidgetItem('Example Model')
             cellItem.setFlags(cellItem.flags() ^ Qt.ItemIsEditable)
             self.mainTable.setItem(row, 2, cellItem)
-
         else:
-
             cellItem = QTableWidgetItem('')
             cellItem.setFlags(cellItem.flags() ^ Qt.ItemIsEditable)
             self.mainTable.setItem(row, 2, cellItem)
 
 
     def updateTotalUnits(self):
-
-        total = 0
-        
+        total = 0       
         rows = self.mainTable.rowCount()
         for row in range(rows):
             cell = self.mainTable.item(row, 3)
-
             if cell:
                 cellVal = int(cell.text())
                 total = total + cellVal
-
         self.totUnitsLabel.setText('Total <{}>'.format(total))
 
 
@@ -284,7 +285,6 @@ class Receiving(QMainWindow):
 
 
     def resizeEvent(self, e):
-
         size = e.size()
         print(size)
     

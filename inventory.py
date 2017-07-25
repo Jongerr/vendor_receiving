@@ -47,7 +47,7 @@ def generateItems():
             print('Duplicate found: {}'.format(plu))
             continue
 
-        data[plu] = {'UPC':upc, 'Department':department, 'Model':item}
+        data[plu] = {'upc':upc, 'department':department, 'model':item}
 
     with open('items.json', 'w') as f:
         json.dump(data, f)
@@ -75,7 +75,7 @@ def generatePO():
         po_num = 24000000 + random.randint(1, 999999)
         if po_num in po_dict:
             continue
-        po_dict[po_num] = {'department': (po_num % 7) + 1, 'items': [], 'vendor': random.choice(vendors)}
+        po_dict[po_num] = {'department': (po_num % 7) + 1, 'items': {}, 'vendor': random.choice(vendors)}
 
     for key in items_dict:
         match_found = False
@@ -88,10 +88,10 @@ def generatePO():
             po, department = random.choice(list(po_dict.items()))
             department = department['department']
             print('PO department: {}'.format(department))
-            print('item plue: {} department: {}'.format(key, items_dict[key]['Department']))
-            if items_dict[key]['Department'] == department:
+            print('item plu: {} department: {}'.format(key, items_dict[key]['department']))
+            if items_dict[key]['department'] == department:
                 max_count = random.randint(1, 20)
-                po_dict[po]['items'].append((key, max_count))
+                po_dict[po]['items'][key] = max_count
                 match_found = True
 
     with open('pos.json', 'w') as f:
@@ -129,11 +129,11 @@ def fillDB():
         print('failure')
         print(query.lastError().text())
     for key in data:
-        if query.exec_("insert into items values({}, '{}', '{}', {})".format(key, data[key]['UPC'],
-                                                                      data[key]['Model'], data[key]['Department'])):
-            print("values({}, {}, {}, {}) successfully inserted.".format(key, data[key]['UPC'], data[key]['Model'], data[key]['Department']))
+        if query.exec_("insert into items values({}, '{}', '{}', {})".format(key, data[key]['upc'],
+                                                                      data[key]['model'], data[key]['department'])):
+            print("values({}, {}, {}, {}) successfully inserted.".format(key, data[key]['upc'], data[key]['model'], data[key]['department']))
         else:
-            print("values({}, {}, {}, {}) unsuccessfully inserted.".format(key, data[key]['UPC'], data[key]['Model'], data[key]['Department']))
+            print("values({}, {}, {}, {}) unsuccessfully inserted.".format(key, data[key]['upc'], data[key]['model'], data[key]['department']))
             print(query.lastError().text())
 
     with open('pos.json') as f:
@@ -154,7 +154,7 @@ def fillDB():
         item_string = json.dumps(po_dict[key]['items'])
         item_blob = item_string.encode(ENCODING)
         if query.exec_("insert into purchase_order values({}, '{}', {}, '{}')"\
-                       .format(key, po_dict[key]['vendor'], po_dict[key]['department'], memoryview(item_blob))):
+                       .format(key, po_dict[key]['vendor'], po_dict[key]['department'], item_string)):
             print("values({}, {}, {}, {}) successfully inserted."\
                   .format(key, po_dict[key]['vendor'], po_dict[key]['department'], item_string))
         else:
