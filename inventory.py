@@ -9,7 +9,7 @@ ENCODING = 'utf-8'
 
 
 def scrambleWord(word):
-
+    """Randomize the letters in word and return the resulting string."""
     word_list = list(word)
     random.shuffle(word_list)
     word = ''.join(word_list)
@@ -17,7 +17,12 @@ def scrambleWord(word):
 
 
 def generateItems():
-    
+    """Generate a dictionary of retail products and store the data in items.json.
+
+    Pulls a list of items and artificially doubles it with scrambled item names.
+    Each item is given a random PLU, UPC, and department number.
+    Each dictionary key is the item's PLU.
+    """
     response = requests.get('https://www.randomlists.com/data/things.json')
     json_data = response.json()
     items = json_data['RandL']['items']
@@ -35,7 +40,7 @@ def generateItems():
         random.seed(item)
         upc = random.randint(100000000000, 999999999999)
         plu = random.randint(1000, 9999999)
-        department = (plu & 7) + 1
+        department = (plu % 7) + 1
         print('UPC:{0} | PLU:{1} | Item:{2} | D{3}'.format(upc, plu, item, department))
 
         if plu in data:
@@ -44,14 +49,20 @@ def generateItems():
 
         data[plu] = {'UPC':upc, 'Department':department, 'Model':item}
 
-    with open('items.txt', 'w') as f:
+    with open('items.json', 'w') as f:
         json.dump(data, f)
 
 
-def generatePO(filename):
+def generatePO():
+    """Create dumby Purchase Orders and store them in pos.json.
 
+    Each PO is asigned one random vendor and department number,
+    along with a random length list of items belonging to said department.
+
+    Returns: True if items.json successfully opens, False otherwise.
+    """
     try:
-        with open(filename, 'r') as f:
+        with open('items.json', 'r') as f:
             items_dict = json.load(f)
     except FileNotFoundError:
         return False
@@ -68,22 +79,33 @@ def generatePO(filename):
 
     for key in items_dict:
         match_found = False
+        loops = 0
         while not match_found:
+            loops += 1
+            if loops > 200:
+                print('\n\nToo many loops.\n\n')
+                break
             po, department = random.choice(list(po_dict.items()))
             department = department['department']
+            print('PO department: {}'.format(department))
+            print('item plue: {} department: {}'.format(key, items_dict[key]['Department']))
             if items_dict[key]['Department'] == department:
                 max_count = random.randint(1, 20)
                 po_dict[po]['items'].append((key, max_count))
                 match_found = True
 
-    with open('pos.txt', 'w') as f:
+    with open('pos.json', 'w') as f:
         json.dump(po_dict, f)
     return True
 
 
-def filldb():
+def fillDB():
+    """Create a database and populate two tables(named items and purchase_order).
 
-    with open('items.txt') as f:
+    The 'items' and 'purchase_order' tables are populated with the data from items.json
+    and pos.json respectively.
+    """
+    with open('items.json') as f:
         data = json.load(f)
 
     db = QSqlDatabase.addDatabase('QSQLITE')
@@ -114,7 +136,7 @@ def filldb():
             print("values({}, {}, {}, {}) unsuccessfully inserted.".format(key, data[key]['UPC'], data[key]['Model'], data[key]['Department']))
             print(query.lastError().text())
 
-    with open('pos.txt') as f:
+    with open('pos.json') as f:
         po_dict = json.load(f)
 
     if query.exec_("drop table purchase_order"):
@@ -136,14 +158,13 @@ def filldb():
             print("values({}, {}, {}, {}) successfully inserted."\
                   .format(key, po_dict[key]['vendor'], po_dict[key]['department'], item_string))
         else:
-##            print("values({}, {}, {}, {}) unsuccessfully inserted."\
-##                  .format(key, po_dict[key]['vendor'], po_dict[key]['department'], item_blob))
-            print(query.lastError().text())
-                                                                            
+            print("values({}, {}, {}, {}) unsuccessfully inserted."\
+                  .format(key, po_dict[key]['vendor'], po_dict[key]['department'], item_blob))
+            print(query.lastError().text())                                                                            
 
 
 if __name__ == '__main__':
 
-    #generateItems()
-    filldb()
-    #generatePO('items.txt')
+    generateItems()
+    generatePO()
+    fillDB()

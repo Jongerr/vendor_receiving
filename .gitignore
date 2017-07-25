@@ -13,5 +13,5 @@ src/*.egg-info
 lib
 lib64
 config.py
-items.txt
-pos.txt
+items.json
+pos.json
