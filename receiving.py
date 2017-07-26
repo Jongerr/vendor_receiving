@@ -122,26 +122,28 @@ class Receiving(QMainWindow):
         intValidator = QIntValidator()
         windowWidth = self.width()
 
+        #Left Side Inputs
         self.poLine = QLineEdit()
         self.poLine.setValidator(intValidator)
         self.poLine.setMaximumWidth(windowWidth / 6)
         self.poLine.editingFinished.connect(self.lookupPO)
-        vendorLine = QLineEdit()
-        vendorLine.setMaximumWidth(windowWidth / 8)
-        vendorNameLabel = QLabel('<Example Vendor Name>')
+        self.vendorLine = QLineEdit()
+        self.vendorLine.setMaximumWidth(windowWidth / 8)
+        self.vendorNameLabel = QLabel('<Example Vendor Name>')
         addrLabel = QLabel('<Example Address>')
         ctstLabel = QLabel('<Example City/State>')
         zipLabel = QLabel('<Example Zip Code>')
 
         leftForm.addRow('&P.O.# ', self.poLine)
-        leftForm.addRow('Vendor ', vendorLine)
-        leftForm.addRow('Name ', vendorNameLabel)
+        leftForm.addRow('Vendor ', self.vendorLine)
+        leftForm.addRow('Name ', self.vendorNameLabel)
         leftForm.addRow('Address ', addrLabel)
         leftForm.addRow('City, St ', ctstLabel)
         leftForm.addRow('Zip ', zipLabel)
 
-        bolLine = QLineEdit()
-        bolLine.setMaximumWidth(windowWidth / 4)
+        #Right Side Inputs
+        self.bolLine = QLineEdit()
+        self.bolLine.setMaximumWidth(windowWidth / 4)
         pacSlipLine = QLineEdit()
         pacSlipLine.setMaximumWidth(windowWidth / 4)
         totUnitsLine = QLineEdit()
@@ -166,24 +168,25 @@ class Receiving(QMainWindow):
         psHorizontalLayout.addSpacing(180)
         
         storeLocation = QLabel('Location < 22>')
-        depLabel = QLabel('Department <D1>')
+        self.depLabel = QLabel('Department <  >')
         
         locHorizontalLayout = QHBoxLayout()
         locHorizontalLayout.setSpacing(3)
         locHorizontalLayout.addWidget(storeLocation)
-        locHorizontalLayout.addWidget(depLabel)
+        locHorizontalLayout.addWidget(self.depLabel)
         locHorizontalLayout.addSpacing(180)
         
-        coordNumLine = QLineEdit()
-        coordNumLine.setValidator(intValidator)
-        coordNumLine.setMaximumWidth(windowWidth / 8)
+        self.coordNumLine = QLineEdit()
+        self.coordNumLine.setValidator(intValidator)
+        self.coordNumLine.setMaximumWidth(windowWidth / 8)
+        self.coordNumLine.editingFinished.connect(self.verifyCoordNum)
 
-        rightForm.addRow('&Bill of Landing ', bolLine)
+        rightForm.addRow('&Bill of Landing ', self.bolLine)
         rightForm.addRow('Packing &Slip ', pacSlipLine)
         rightForm.addRow('&Total Units Received', totUnitsLine)
         rightForm.addRow(psHorizontalLayout)
         rightForm.addRow(locHorizontalLayout)
-        rightForm.addRow('Receiving &Coordinator ', coordNumLine)
+        rightForm.addRow('Receiving &Coordinator ', self.coordNumLine)
 
         self.inputLayout.addLayout(leftForm)
         self.inputLayout.addLayout(rightForm)
@@ -220,18 +223,16 @@ class Receiving(QMainWindow):
             self.mainTable.setColumnWidth(i, columnSizes[column])
         
         self.mainTable.setShowGrid(False)
-        #Making connections
         self.mainTable.cellChanged.connect(self.cellChangeSlot)
 
 
-    def lookupPO(self):
+    def lookupPO(self):          
         po_num = self.poLine.text()
         if not self.query.exec_("select * from purchase_order where po = {}".format(po_num)):
-            print(query.lastError().text())
+            print(self.query.lastError().text())
             return False
         elif not self.query.next():
             self.poLine.setText('')
-            noPOMessage = QMessageBox()
             QMessageBox.warning(self, 'PO not found', 'Could not find PO# {}.'.format(po_num))
             return False
         else:
@@ -241,7 +242,11 @@ class Receiving(QMainWindow):
             items = self.query.value(3)
             items = json.loads(items)
             self.po_dict[po] = {'vendor': vendor, 'department': department, 'items': items}
-            #self.poLine.setValidator(NoEditValidator())
+            self.vendorLine.setText(vendor)
+            self.vendorLine.setReadOnly(True)
+            self.vendorNameLabel.setText('<{}>'.format(vendor))
+            self.depLabel.setText('<D{}>'.format(department))
+            self.bolLine.setFocus()
             return True
             
 
@@ -277,6 +282,21 @@ class Receiving(QMainWindow):
                 cellVal = int(cell.text())
                 total = total + cellVal
         self.totUnitsLabel.setText('Total <{}>'.format(total))
+
+
+    def verifyCoordNum(self):
+        coord = self.coordNumLine.text()
+        if coord == self.username:
+            QMessageBox.warning(self, 'Invalid Coordinator Number', 'Cannot receive your own scans.')
+            return
+        if not self.query.exec_("select id from employee where id = {}".format(coord)):
+            print(self.query.lastError().text())
+        elif not self.query.next():
+            self.coordNumLine.setText('')
+            QMessageBox.warning(self, 'Invalid Coordinator Number', 'Coordinator does not have rights to this program.')
+        else:
+            self.coordNumLine.setReadOnly(True)
+            self.mainTable.setFocus()
 
 
     def updateTotalPS(self):

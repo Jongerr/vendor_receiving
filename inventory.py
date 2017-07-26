@@ -160,11 +160,32 @@ def fillDB():
         else:
             print("values({}, {}, {}, {}) unsuccessfully inserted."\
                   .format(key, po_dict[key]['vendor'], po_dict[key]['department'], item_blob))
-            print(query.lastError().text())                                                                            
+            print(query.lastError().text())
+
+
+def createEmployeeTable():
+    db = QSqlDatabase.addDatabase('QSQLITE')
+    db.setDatabaseName('C:\\receiving_project\\vendor_receiving\\inventory.db')
+    if not db.open():
+        print('DB could not be opened')
+        error = QSqlDatabase.lastError()
+        print(error.text())
+        return False
+    query = QSqlQuery()
+    query.exec_("create table employee(id int primary key, first_name varchar(10), "\
+                "last_name varchar(10), posistion int)")
+    query.exec_("insert into employee values({}, '{}', '{}', {})".format(162973, 'Jon', 'Michie', 2))
+    query.exec_("insert into employee values({}, '{}', '{}', {})".format(131901, 'Ben', 'Terry', 3))
+    query.exec_("insert into employee values({}, '{}', '{}', {})".format(150697, 'Daniel', 'Silva', 2))
+    query.exec_("insert into employee values({}, '{}', '{}', {})".format(68412, 'James', 'Hutchetson', 2))
+    query.exec_("insert into employee values({}, '{}', '{}', {})".format(161844, 'MacKenly', 'Gamble', 1))
+    query.exec_("insert into employee values({}, '{}', '{}', {})".format(141047, 'George', 'Huston', 1))
+    query.exec_("insert into employee values({}, '{}', '{}', {})".format(46045, 'Arthur', 'Art', 1))
 
 
 if __name__ == '__main__':
 
-    generateItems()
-    generatePO()
-    fillDB()
+##    generateItems()
+##    generatePO()
+##    fillDB()
+    createEmployeeTable()
