@@ -158,7 +158,6 @@ class Receiving(QMainWindow):
         self.totUnitsLabel = QLabel('Total <   0>')
         
         psHorizontalLayout = QHBoxLayout()
-        #QLayout.setAlignment(psHorizontalLayout, Qt.AlignJustify)
         psHorizontalLayout.addWidget(psUnitsLabel)
         psHorizontalLayout.addWidget(psUnitsLine)
         psHorizontalLayout.addWidget(self.totUnitsLabel)
@@ -194,10 +193,12 @@ class Receiving(QMainWindow):
 
     def createMainTable(self):
         self.mainTable = QTableWidget(50, 6)
-        self.mainTable.setItemDelegate(Delegate())
+        self.mainTable.delegate = Delegate()
+        self.mainTable.setItemDelegateForColumn(0, self.mainTable.delegate)
+        self.mainTable.setItemDelegateForColumn(1, self.mainTable.delegate)
+        self.mainTable.listen_to_signals = True
 
-        #Make the 3rd and 6th columns read-only 
-        columns = (2, 5)
+        columns = (2, 3, 4, 5)
         rows = self.mainTable.rowCount()
         for column in columns:
             for row in range(rows):
@@ -251,26 +252,90 @@ class Receiving(QMainWindow):
             
 
     def cellChangeSlot(self, row, column):
-        if column == 0:
+        if not self.mainTable.listen_to_signals:
+            return
+        if column == 0 or column == 1:
             self.updateModelInfo(row, column)   
         elif column == 3:
             self.updateTotalUnits()            
-        elif column == 4:
-            self.updateTotalPS()
         else:
             pass
 
 
-    def updateModelInfo(self, row, column):
-        upcNum = int(self.mainTable.item(row, column).text())
-        if upcNum == 123456:
-            cellItem = QTableWidgetItem('Example Model')
-            cellItem.setFlags(cellItem.flags() ^ Qt.ItemIsEditable)
-            self.mainTable.setItem(row, 2, cellItem)
+    def lookupItemByUPC(self, upc):
+        if not self.query.exec_("select * from items where upc = {}".format(upc)):
+            print(self.query.lastError().text())
+            return ()
+        elif not self.query.next():
+            return ()
         else:
-            cellItem = QTableWidgetItem('')
-            cellItem.setFlags(cellItem.flags() ^ Qt.ItemIsEditable)
-            self.mainTable.setItem(row, 2, cellItem)
+            plu_num = self.query.value(0)
+            upc = self.query.value(1)
+            model = self.query.value(2)
+            department = self.query.value(3)
+            return (plu_num, upc, model, department)
+
+
+    def lookupItemByPLU(self, plu):
+        if not self.query.exec_("select * from items where plu = {}".format(plu)):
+            print(self.query.lastError().text())
+            return ()
+        elif not self.query.next():
+            return ()
+        else:
+            plu_num = self.query.value(0)
+            upc = self.query.value(1)
+            model = self.query.value(2)
+            department = self.query.value(3)
+            return (plu_num, upc, model, department)
+        
+
+    def itemInCurrentPO(self, plu):
+        if not self.po_dict:
+            return False
+        po_num = int(self.poLine.text())
+        items = list(self.po_dict[po_num]['items'].keys())
+        if str(plu) in items:
+            return True
+        else:
+            return False
+        
+
+    def updateItemRow(self, row, item_info):
+        pass
+
+
+    def updateModelInfo(self, row, column):
+        self.mainTable.listen_to_signals = False
+        if not self.mainTable.item(row, column).text():
+            self.mainTable.listen_to_signals = True
+            return
+        
+        if column == 0:
+            upc = int(self.mainTable.item(row, column).text())
+            item_info = self.lookupItemByUPC(upc)
+        else:
+            print(self.mainTable.item(row, column).text())
+            plu = int(self.mainTable.item(row, column).text())
+            item_info = self.lookupItemByPLU(plu)
+
+        if not item_info:
+            QMessageBox().warning(self, 'Item not found', 'Could not find given item.')
+            self.mainTable.item(row, 0) and self.mainTable.item(row, 0).setText('')
+            self.mainTable.item(row, 1) and self.mainTable.item(row, 1).setText('')
+        elif self.po_dict and self.itemInCurrentPO(item_info[0]):
+            self.updateItemRow(row, item_info)
+            print('Item in PO, updating....')
+        elif self.po_dict and not self.itemInCurrentPO(item_info[0]):
+            print('Item not in PO.')
+            QMessageBox().warning(self, 'Item not on PO', 'Given item does not belong on PO.')
+            self.mainTable.item(row, 0) and self.mainTable.item(row, 0).setText('')
+            self.mainTable.item(row, 1) and self.mainTable.item(row, 1).setText('')
+        elif not self.po_dict:
+            print('No PO, updating row...')
+            self.updateItemRow(row, item_info)
+
+        self.mainTable.listen_to_signals = True
 
 
     def updateTotalUnits(self):
@@ -299,9 +364,15 @@ class Receiving(QMainWindow):
             self.mainTable.setFocus()
 
 
-    def updateTotalPS(self):
-
-        pass
+    def getTotalPSUnits(self):
+        total = 0       
+        rows = self.mainTable.rowCount()
+        for row in range(rows):
+            cell = self.mainTable.item(row, 4)
+            if cell:
+                cellVal = int(cell.text())
+                total = total + cellVal
+        self.totUnitsLabel.setText('Total <{}>'.format(total))
 
 
     def resizeEvent(self, e):
@@ -314,7 +385,6 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     login = Login()
-    #receiver = Receiving()
     if(login.exec_() == QDialog.Accepted):
         receiver = Receiving(login.username, login.password)
         receiver.show()
