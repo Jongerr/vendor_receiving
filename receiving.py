@@ -273,7 +273,7 @@ class Receiving(QMainWindow):
             upc = self.query.value(1)
             model = self.query.value(2)
             department = self.query.value(3)
-            return (plu_num, upc, model, department)
+            return (upc, plu_num, model, department)
 
 
     def lookupItemByPLU(self, plu):
@@ -287,7 +287,7 @@ class Receiving(QMainWindow):
             upc = self.query.value(1)
             model = self.query.value(2)
             department = self.query.value(3)
-            return (plu_num, upc, model, department)
+            return (upc, plu_num, model, department)
         
 
     def itemInCurrentPO(self, plu):
@@ -299,11 +299,54 @@ class Receiving(QMainWindow):
             return True
         else:
             return False
+
+
+    def checkDuplicateItem(self, plu, exempt_row):
+        rows = self.mainTable.rowCount()
+        duplicate_row = None
+        for row in range(rows):
+            if row == exempt_row:
+                continue
+            current_cell = self.mainTable.item(row, 1)
+            if not current_cell:
+                continue
+            print(type(current_cell.text()))
+            if int(current_cell.text()) == plu:
+                duplicate_row = row
+                break
+        return duplicate_row
         
 
-    def updateItemRow(self, row, item_info):
-        pass
-
+    def updateItemRow(self, row, item_info, plu_entered=True):
+        if plu_entered:
+            initial_val = 0
+            upc = QTableWidgetItem(item_info[0])
+            upc.setFlags(upc.flags() ^ Qt.ItemIsEditable)
+            self.mainTable.setItem(row, 0, upc)
+            plu = self.mainTable.item(row, 1)
+            plu.setFlags(plu.flags() ^ Qt.ItemIsEditable)
+        else:
+            initial_val = 1
+            plu = QTableWidgetItem(item_info[1])
+            plu.setFlags(plu.flags() ^ Qt.ItemIsEditable)
+            self.mainTable.setItem(row, 1, plu)
+            upc = self.mainTable.item(row, 0)
+            upc.setFlags(upc.flags() ^ Qt.ItemIsEditable)
+            
+        description = self.mainTable.item(row, 2)
+        description.setText('Example Description')
+        
+        physical_units = self.mainTable.item(row, 3)
+        physical_units.setFlags(physical_units.flags() | Qt.ItemIsEditable)
+        physical_units.setText(str(initial_val))
+        
+        packingslip_units = self.mainTable.item(row, 4)
+        packingslip_units.setFlags(packingslip_units.flags() | Qt.ItemIsEditable)
+        packingslip_units.setText(str(initial_val))
+        
+        model = self.mainTable.item(row, 5)
+        model.setText(item_info[2])
+        
 
     def updateModelInfo(self, row, column):
         self.mainTable.listen_to_signals = False
@@ -314,26 +357,41 @@ class Receiving(QMainWindow):
         if column == 0:
             upc = int(self.mainTable.item(row, column).text())
             item_info = self.lookupItemByUPC(upc)
+            plu_entered = False
         else:
             print(self.mainTable.item(row, column).text())
             plu = int(self.mainTable.item(row, column).text())
             item_info = self.lookupItemByPLU(plu)
+            plu_entered = True
 
         if not item_info:
             QMessageBox().warning(self, 'Item not found', 'Could not find given item.')
             self.mainTable.item(row, 0) and self.mainTable.item(row, 0).setText('')
             self.mainTable.item(row, 1) and self.mainTable.item(row, 1).setText('')
-        elif self.po_dict and self.itemInCurrentPO(item_info[0]):
-            self.updateItemRow(row, item_info)
+            self.mainTable.listen_to_signals = True
+            return
+
+        duplicate_row = self.checkDuplicateItem(item_info[1], row)
+        if duplicate_row != None:
+            self.mainTable.item(row, column).setText('')
+            print(duplicate_row)
+            physical_units = int(self.mainTable.item(duplicate_row, 3).text())
+            physical_units += 1
+            self.mainTable.item(duplicate_row, 3).setText(str(physical_units))
+            packingslip_units = int(self.mainTable.item(duplicate_row, 4).text())
+            packingslip_units += 1
+            self.mainTable.item(duplicate_row, 4).setText(str(packingslip_units))
+        elif self.po_dict and self.itemInCurrentPO(item_info[1]):
+            self.updateItemRow(row, item_info, plu_entered)
             print('Item in PO, updating....')
-        elif self.po_dict and not self.itemInCurrentPO(item_info[0]):
+        elif self.po_dict and not self.itemInCurrentPO(item_info[1]):
             print('Item not in PO.')
             QMessageBox().warning(self, 'Item not on PO', 'Given item does not belong on PO.')
             self.mainTable.item(row, 0) and self.mainTable.item(row, 0).setText('')
             self.mainTable.item(row, 1) and self.mainTable.item(row, 1).setText('')
         elif not self.po_dict:
             print('No PO, updating row...')
-            self.updateItemRow(row, item_info)
+            self.updateItemRow(row, item_info, plu_entered)
 
         self.mainTable.listen_to_signals = True
 
