@@ -11,12 +11,12 @@ class Login(QDialog):
 
     def __init__(self):
         super().__init__()
-        
+
+        self.initDB()
         self.initUI()
 
 
     def initUI(self):
-
         self.usernameLine = QLineEdit('Username')
         self.passwordLine = QLineEdit('Password')
         
@@ -35,25 +35,43 @@ class Login(QDialog):
         self.show()
 
 
-    def checkCredentials(self, checked):
+    def initDB(self):
+        self.db = QSqlDatabase.addDatabase('QSQLITE')
+        self.db.setDatabaseName('C:\\receiving_project\\vendor_receiving\\inventory.db')
+        if not self.db.open():
+            print('Database could not be opened.')
+            print(QSqlDatabase.lastError().text())
+            self.close()
+        self.query = QSqlQuery()
 
+
+    def checkCredentials(self, checked):
         self.username = self.usernameLine.text()
         self.password = self.passwordLine.text()
-
-        if self.username == 'test' and self.password == 'test':
-            self.accept()
-
+        if not self.query.exec_("select * from employee where id = {}".format(self.usernameLine.text())):
+            self.usernameLine.setText('')
+            self.passwordLine.setText('')
+            QMessageBox.warning(self, 'Invalid Coordinator Number', 'Coordinator does not have rights to this program.')
+            print(self.query.lastError().text())
+        elif not self.query.next():
+            self.usernameLine.setText('')
+            self.passwordLine.setText('')
+            QMessageBox.warning(self, 'Invalid Coordinator Number', 'Coordinator does not have rights to this program.')
         else:
-            QMessageBox.warning(self, 'Login', 'Login Failed')
+            self.username = str(self.query.value(0))
+            self.password = self.passwordLine.text()
+            self.fullname = (self.query.value(1), self.query.value(2))
+            self.accept()
 
 
 class Receiving(QMainWindow):
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, fullname):
         super().__init__()
         
         self.username = username
         self.password = password
+        self.fullname = fullname
         self.po_dict = {}
         self.initDB()
         self.initUI()
@@ -100,8 +118,8 @@ class Receiving(QMainWindow):
         layout = QHBoxLayout()
 
         idLabel = QLabel('Clerk ID:[{}]'.format(self.username))
-        passLabel = QLabel('Password:[********* ]')
-        nameLabel = QLabel('Name: <Michie, Jon T.   >')
+        passLabel = QLabel('Password:[{} ]'.format('*' * len(self.password)))
+        nameLabel = QLabel('Name: <{}, {} >'.format(self.fullname[1], self.fullname[0]))
 
         layout.addWidget(idLabel)
         layout.addWidget(passLabel)
@@ -308,9 +326,8 @@ class Receiving(QMainWindow):
             if row == exempt_row:
                 continue
             current_cell = self.mainTable.item(row, 1)
-            if not current_cell:
+            if not current_cell or not current_cell.text():
                 continue
-            print(type(current_cell.text()))
             if int(current_cell.text()) == plu:
                 duplicate_row = row
                 break
@@ -444,7 +461,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     login = Login()
     if(login.exec_() == QDialog.Accepted):
-        receiver = Receiving(login.username, login.password)
+        receiver = Receiving(login.username, login.password, login.fullname)
         receiver.show()
         
     sys.exit(app.exec_())
