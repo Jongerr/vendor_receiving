@@ -1,6 +1,7 @@
 import json
 import random
 import requests
+from passlib.hash import pbkdf2_sha256 as pbk
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from pprint import pprint
 
@@ -172,20 +173,54 @@ def createEmployeeTable():
         print(error.text())
         return False
     query = QSqlQuery()
-    query.exec_("create table employee(id int primary key, first_name varchar(10), "\
-                "last_name varchar(10), posistion int)")
-    query.exec_("insert into employee values({}, '{}', '{}', {})".format(162973, 'Jon', 'Michie', 2))
-    query.exec_("insert into employee values({}, '{}', '{}', {})".format(131901, 'Ben', 'Terry', 3))
-    query.exec_("insert into employee values({}, '{}', '{}', {})".format(150697, 'Daniel', 'Silva', 2))
-    query.exec_("insert into employee values({}, '{}', '{}', {})".format(68412, 'James', 'Hutchetson', 2))
-    query.exec_("insert into employee values({}, '{}', '{}', {})".format(161844, 'MacKenly', 'Gamble', 1))
-    query.exec_("insert into employee values({}, '{}', '{}', {})".format(141047, 'George', 'Huston', 1))
-    query.exec_("insert into employee values({}, '{}', '{}', {})".format(46045, 'Arthur', 'Art', 1))
+    if not query.exec_("drop table employee"):
+        print(query.lastError().text())
+    if not query.exec_("create table employee(id int primary key, first_name varchar(10), "\
+                "last_name varchar(10), posistion int, pass_hash varchar(200))"):
+        print(query.lastError().text())
+    if not query.exec_("insert into employee values({}, '{}', '{}', {}, '{}')".\
+                format(162973, 'Jon', 'Michie', 2, pbk.hash('Michie'))):
+        print(query.lastError().text())
+    query.exec_("insert into employee values({}, '{}', '{}', {}, '{}')".\
+                format(131901, 'Ben', 'Terry', 3, pbk.hash('Terry')))
+    query.exec_("insert into employee values({}, '{}', '{}', {}, '{}')".\
+                format(150697, 'Daniel', 'Silva', 2, pbk.hash('Silva')))
+    query.exec_("insert into employee values({}, '{}', '{}', {}, '{}')".\
+                format(68412, 'James', 'Hutchetson', 2, pbk.hash('Hutchetson')))
+    query.exec_("insert into employee values({}, '{}', '{}', {}, '{}')".\
+                format(161844, 'MacKenly', 'Gamble', 1, pbk.hash('Gamble')))
+    query.exec_("insert into employee values({}, '{}', '{}', {}, '{}')".\
+                format(141047, 'George', 'Huston', 1, pbk.hash('Huston')))
+    query.exec_("insert into employee values({}, '{}', '{}', {}, '{}')".\
+                format(46045, 'Arthur', 'Art', 1, pbk.hash('Art')))
+
+
+def testHashVerification(name):
+    db = QSqlDatabase.addDatabase('QSQLITE')
+    db.setDatabaseName('C:\\receiving_project\\vendor_receiving\\inventory.db')
+    if not db.open():
+        print('DB could not be opened')
+        error = QSqlDatabase.lastError()
+        print(error.text())
+        return False
+    query = QSqlQuery()
+    if not query.exec_("select pass_hash from employee where last_name = '{}'".format(name)):
+        print(query.lastError().text())
+    elif not query.next():
+        print('Table values not found')
+    else:
+        pass_hash = query.value(0)
+
+        if pbk.verify(name, pass_hash):
+            print('It\'s a match!')
+        else:
+            print('Match not found.')
 
 
 if __name__ == '__main__':
 
-##    generateItems()
-##    generatePO()
-##    fillDB()
+    generateItems()
+    generatePO()
+    fillDB()
     createEmployeeTable()
+    testHashVerification('Terry')

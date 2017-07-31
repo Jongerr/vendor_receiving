@@ -1,67 +1,10 @@
 import json
 import sys
-from custom_qt_classes import Delegate, NoEditValidator
+from custom_qt_classes import Delegate, Login
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIntValidator, QFont
 from PyQt5.QtCore import Qt
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
-
-
-class Login(QDialog):
-
-    def __init__(self):
-        super().__init__()
-
-        self.initDB()
-        self.initUI()
-
-
-    def initUI(self):
-        self.usernameLine = QLineEdit('Username')
-        self.passwordLine = QLineEdit('Password')
-        
-        loginButton = QPushButton('Login')
-        loginButton.clicked.connect(self.checkCredentials)
-
-        loginBox = QGroupBox('Login Form', self)
-        loginLayout = QVBoxLayout()
-        loginLayout.addWidget(self.usernameLine)
-        loginLayout.addWidget(self.passwordLine)
-        loginLayout.addWidget(loginButton)
-
-        loginBox.setLayout(loginLayout)
-
-        self.setGeometry(300, 300, 200, 150)
-        self.show()
-
-
-    def initDB(self):
-        self.db = QSqlDatabase.addDatabase('QSQLITE')
-        self.db.setDatabaseName('C:\\receiving_project\\vendor_receiving\\inventory.db')
-        if not self.db.open():
-            print('Database could not be opened.')
-            print(QSqlDatabase.lastError().text())
-            self.close()
-        self.query = QSqlQuery()
-
-
-    def checkCredentials(self, checked):
-        self.username = self.usernameLine.text()
-        self.password = self.passwordLine.text()
-        if not self.query.exec_("select * from employee where id = {}".format(self.usernameLine.text())):
-            self.usernameLine.setText('')
-            self.passwordLine.setText('')
-            QMessageBox.warning(self, 'Invalid Coordinator Number', 'Coordinator does not have rights to this program.')
-            print(self.query.lastError().text())
-        elif not self.query.next():
-            self.usernameLine.setText('')
-            self.passwordLine.setText('')
-            QMessageBox.warning(self, 'Invalid Coordinator Number', 'Coordinator does not have rights to this program.')
-        else:
-            self.username = str(self.query.value(0))
-            self.password = self.passwordLine.text()
-            self.fullname = (self.query.value(1), self.query.value(2))
-            self.accept()
 
 
 class Receiving(QMainWindow):
@@ -221,7 +164,7 @@ class Receiving(QMainWindow):
         for column in columns:
             for row in range(rows):
                 self.mainTable.setRowHeight(row, 30)
-                placeholderCell = QTableWidgetItem('###')
+                placeholderCell = QTableWidgetItem('')
                 placeholderCell.setFlags(placeholderCell.flags() ^ Qt.ItemIsEditable) 
                 self.mainTable.setItem(row, column, placeholderCell)
                 
