@@ -1,4 +1,5 @@
 import json
+import os
 import random
 import requests
 from passlib.hash import pbkdf2_sha256 as pbk
@@ -7,6 +8,7 @@ from pprint import pprint
 
 
 ENCODING = 'utf-8'
+DB_PATH = os.path.join(os.path.curdir, 'inventory.db')
 
 
 def scrambleWord(word):
@@ -110,7 +112,7 @@ def fillDB():
         data = json.load(f)
 
     db = QSqlDatabase.addDatabase('QSQLITE')
-    db.setDatabaseName('C:\\receiving_project\\vendor_receiving\\inventory.db')
+    db.setDatabaseName(DB_PATH)
     if not db.open():
         print('DB could not be opened')
         error = QSqlDatabase.lastError()
@@ -166,7 +168,7 @@ def fillDB():
 
 def createEmployeeTable():
     db = QSqlDatabase.addDatabase('QSQLITE')
-    db.setDatabaseName('C:\\receiving_project\\vendor_receiving\\inventory.db')
+    db.setDatabaseName(DB_PATH)
     if not db.open():
         print('DB could not be opened')
         error = QSqlDatabase.lastError()
@@ -197,7 +199,7 @@ def createEmployeeTable():
 
 def testHashVerification(name):
     db = QSqlDatabase.addDatabase('QSQLITE')
-    db.setDatabaseName('C:\\receiving_project\\vendor_receiving\\inventory.db')
+    db.setDatabaseName(DB_PATH)
     if not db.open():
         print('DB could not be opened')
         error = QSqlDatabase.lastError()
